@@ -240,6 +240,79 @@
             font-weight: bold;
         }
 
+        /* Presets Container */
+        .presets {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .preset-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #aaa;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .preset-btn:hover {
+            border-color: #fff;
+            color: #fff;
+        }
+
+        .preset-btn.active {
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+            color: #fff;
+        }
+
+        /* Custom Input Group */
+        .custom-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .custom-input-group input {
+            width: 60px;
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.2);
+            color: #fff;
+            text-align: center;
+            font-family: inherit;
+        }
+
+        /* Remove arrows from number input */
+        .custom-input-group input::-webkit-outer-spin-button,
+        .custom-input-group input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .custom-input-group button {
+            padding: 5px 15px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .custom-input-group button:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: #fff;
+        }
+
         .controls button {
             background-color: transparent;
             border: 2px solid var(--text-color);
@@ -297,10 +370,65 @@
             fill: currentColor;
         }
 
+        /* --- Floating Mute Button --- */
+        .mute-btn-floating {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px); /* Increased blur */
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.6);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 50;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .mute-btn-floating:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        /* --- Progress Bar Styles --- */
+        .progress-line-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            z-index: 40;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .progress-line-container.active {
+            opacity: 1;
+        }
+
+        .progress-line-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width 1s linear;
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+
         /* Hide Sidebar Toggle and Fullscreen Button in Fullscreen Mode */
         body.fullscreen-mode .sidebar-toggle,
         body.fullscreen-mode .sidebar,
-        body.fullscreen-mode .fullscreen-btn {
+        body.fullscreen-mode .fullscreen-btn,
+        body.fullscreen-mode .mute-btn-floating {
             display: none;
         }
 
@@ -310,6 +438,9 @@
 
     <!-- Background Overlay -->
     <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Mute Button (Main Page) -->
+    <button onclick="toggleMute()" id="muteBtn" class="mute-btn-floating" title="Mute">🔊</button>
 
     <div class="clock-section">
         <div class="clock-container">
@@ -329,6 +460,20 @@
         
         <div class="pomodoro-section">
             <h2>🍅 Pomodoro</h2>
+            
+            <!-- Preset Buttons -->
+            <div class="presets">
+                <button class="preset-btn active" onclick="setMode(25, this)" id="btn-focus">Focus</button>
+                <button class="preset-btn" onclick="setMode(5, this)" id="btn-short">Short Break</button>
+                <button class="preset-btn" onclick="setMode(15, this)" id="btn-long">Long Break</button>
+            </div>
+
+            <!-- Custom Input -->
+            <div class="custom-input-group">
+                <input type="number" id="customMin" placeholder="Min" min="1" max="180">
+                <button onclick="setCustomTime()">Set Custom</button>
+            </div>
+
             <div class="timer-display" id="pomo-timer">25:00</div>
             <div class="controls">
                 <button class="primary" onclick="startTimer()" id="startBtn">Start</button>
@@ -345,6 +490,11 @@
         </svg>
         Fullscreen
     </button>
+
+    <!-- Progress Bar -->
+    <div class="progress-line-container" id="progressContainer">
+        <div class="progress-line-fill" id="progressBar"></div>
+    </div>
 
     <script>
         // --- Fullscreen Logic ---
@@ -487,17 +637,63 @@
 
         // --- 2. Pomodoro Logic ---
         let timerInterval;
-        let timeLeft = 25 * 60; 
+        let currentTotalTime = 25 * 60; // Default total time
+        let timeLeft = currentTotalTime; 
         let isRunning = false;
 
         const timerDisplay = document.getElementById('pomo-timer');
         const startBtn = document.getElementById('startBtn');
         const statusText = document.getElementById('status-text');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
 
         function formatTime(seconds) {
             const m = Math.floor(seconds / 60);
             const s = seconds % 60;
             return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        function updateProgressBar() {
+            const progress = ((currentTotalTime - timeLeft) / currentTotalTime) * 100;
+            progressBar.style.width = `${progress}%`;
+        }
+        
+        function setMode(minutes, btnElement) {
+            // Reset existing timer if running
+            clearInterval(timerInterval);
+            isRunning = false;
+            startBtn.innerText = "Start";
+            
+            // Update time settings
+            currentTotalTime = minutes * 60;
+            timeLeft = currentTotalTime;
+            
+            // Update Display
+            timerDisplay.innerText = formatTime(timeLeft);
+            statusText.innerText = `Switched to ${minutes} min mode.`;
+            document.title = "Flip Clock & Pomodoro";
+            
+            // Reset Progress Bar
+            progressContainer.classList.remove('active');
+            progressBar.style.width = "0%";
+            
+            // Update Buttons UI
+            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+            if (btnElement) {
+                btnElement.classList.add('active');
+            }
+        }
+        
+        function setCustomTime() {
+            const input = document.getElementById('customMin');
+            const minutes = parseInt(input.value);
+            
+            if (!isNaN(minutes) && minutes > 0) {
+                setMode(minutes, null);
+                statusText.innerText = `Switched to custom ${minutes} min mode.`;
+            } else {
+                alert("Please enter a valid number of minutes.");
+            }
         }
 
         function startTimer() {
@@ -512,11 +708,13 @@
             isRunning = true;
             startBtn.innerText = "Pause";
             statusText.innerText = "Focusing...";
+            progressContainer.classList.add('active'); // Show progress bar
 
             timerInterval = setInterval(() => {
                 if (timeLeft > 0) {
                     timeLeft--;
                     timerDisplay.innerText = formatTime(timeLeft);
+                    updateProgressBar();
                     document.title = `(${formatTime(timeLeft)}) Focusing`;
                 } else {
                     finishTimer();
@@ -527,26 +725,57 @@
         function resetTimer() {
             clearInterval(timerInterval);
             isRunning = false;
-            timeLeft = 25 * 60;
-            timerDisplay.innerText = "25:00";
+            timeLeft = currentTotalTime; // Reset to currently selected total time
+            timerDisplay.innerText = formatTime(timeLeft);
             startBtn.innerText = "Start";
             statusText.innerText = "Ready to focus?";
             document.title = "Flip Clock & Pomodoro";
+            
+            // Reset Progress Bar
+            progressContainer.classList.remove('active');
+            progressBar.style.width = "0%";
         }
 
         function finishTimer() {
             clearInterval(timerInterval);
             isRunning = false;
             timerDisplay.innerText = "00:00";
-            statusText.innerText = "🎉 Pomodoro finished! Take a break.";
+            statusText.innerText = "🎉 Timer finished! Take a break.";
             startBtn.innerText = "Start";
             document.title = "Time's up!";
             
+            // Max out progress bar then hide it
+            progressBar.style.width = "100%";
+            setTimeout(() => {
+                progressContainer.classList.remove('active');
+                progressBar.style.width = "0%";
+            }, 1000);
+            
             playAlert();
-            alert("Time's up! You've completed a Pomodoro.");
+            alert("Time's up! You've completed a session.");
+        }
+
+        // --- Mute Logic ---
+        let isMuted = false;
+        const muteBtn = document.getElementById('muteBtn');
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            if (isMuted) {
+                muteBtn.innerText = "🔇";
+                muteBtn.title = "Unmute";
+                // Optional: visual indication of off state
+                muteBtn.style.opacity = "0.5";
+            } else {
+                muteBtn.innerText = "🔊";
+                muteBtn.title = "Mute";
+                muteBtn.style.opacity = "1";
+            }
         }
 
         function playAlert() {
+            if (isMuted) return;
+
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             if (!AudioContext) return;
             
