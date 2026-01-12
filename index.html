@@ -705,6 +705,11 @@
                 return;
             }
 
+            // Request Notification Permission on first user interaction
+            if ("Notification" in window && Notification.permission === "default") {
+                Notification.requestPermission();
+            }
+
             isRunning = true;
             startBtn.innerText = "Pause";
             statusText.innerText = "Focusing...";
@@ -752,7 +757,17 @@
             }, 1000);
             
             playAlert();
-            alert("Time's up! You've completed a session.");
+            
+            // Send Browser Notification
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("Time's up! 🍅", {
+                    body: "Great job! You've completed your session. Take a well-deserved break.",
+                    requireInteraction: true // Keeps notification open until user clicks
+                });
+            } else {
+                // Fallback for no permission
+                alert("Time's up! You've completed a session.");
+            }
         }
 
         // --- Mute Logic ---
