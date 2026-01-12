@@ -12,6 +12,12 @@
             --accent-color: #e74c3c; /* Tomato Red */
             --sidebar-width: 320px;
             --sidebar-bg: #2a2a2a;
+            
+            /* Card Dimensions */
+            --card-width: 225px;
+            --card-height: 300px;
+            --card-radius: 18px;
+            --card-font-size: 180px;
         }
 
         body {
@@ -24,7 +30,7 @@
             justify-content: center;
             min-height: 100vh;
             margin: 0;
-            overflow-x: hidden; /* Prevent horizontal scroll when sidebar is closed */
+            overflow-x: hidden; 
         }
 
         h2 {
@@ -33,9 +39,28 @@
             opacity: 0.8;
         }
 
+        /* --- Overlay (Mask) Styles --- */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+            backdrop-filter: blur(5px); /* Background blur */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 90; /* Below sidebar (100) but above clock */
+        }
+
+        .overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
         /* --- Flip Clock Styles --- */
         .clock-section {
-            /* Ensure clock stays centered */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -44,43 +69,109 @@
 
         .clock-container {
             display: flex;
-            gap: 15px;
-            /* Remove large bottom margin as layout changed */
-            margin-bottom: 0; 
+            gap: 20px;
+            perspective: 1000px; /* Essential for 3D effect */
         }
 
-        .flip-card {
-            background-color: var(--card-bg);
-            width: 150px;
-            height: 200px;
-            border-radius: 12px;
-            font-size: 120px;
-            font-weight: bold;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        /* The container for a single digit pair (Hours/Minutes/Seconds) */
+        .flip-tick {
             position: relative;
+            width: var(--card-width);
+            height: var(--card-height);
+            border-radius: var(--card-radius);
             box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-            overflow: hidden;
+            font-size: var(--card-font-size);
+            font-weight: bold;
+            line-height: var(--card-height);
+            text-align: center;
         }
 
-        /* Middle divider simulating mechanical flip */
-        .flip-card::after {
-            content: '';
+        /* Common styles for the upper/lower halves */
+        .flip-card-inner {
             position: absolute;
-            top: 50%;
             left: 0;
             width: 100%;
-            height: 2px;
-            background-color: rgba(0,0,0,0.3);
-            z-index: 2;
+            height: 50%;
+            background-color: var(--card-bg);
+            overflow: hidden;
+            backface-visibility: hidden; /* Hide back when rotating */
         }
+
+        /* Top half (Upper) */
+        .flip-card-inner.upper {
+            top: 0;
+            border-top-left-radius: var(--card-radius);
+            border-top-right-radius: var(--card-radius);
+            transform-origin: 50% 100%; /* Pivot at bottom */
+        }
+        
+        .flip-card-inner.upper span {
+            display: block;
+            transform: translateY(0%); /* Show top half of text */
+        }
+
+        /* Bottom half (Lower) */
+        .flip-card-inner.lower {
+            bottom: 0;
+            border-bottom-left-radius: var(--card-radius);
+            border-bottom-right-radius: var(--card-radius);
+            transform-origin: 50% 0%; /* Pivot at top */
+            /* Ensure line divider appears correctly */
+            border-top: 1px solid rgba(0,0,0,0.5); 
+        }
+
+        .flip-card-inner.lower span {
+            display: block;
+            transform: translateY(-50%); /* Shift text up to show bottom half */
+        }
+
+        /* Front: Top half of CURRENT number (will rotate down) */
+        .flip-tick .front {
+            z-index: 3;
+            transform: rotateX(0deg);
+        }
+
+        /* Back: Bottom half of NEXT number (will rotate up/appear) */
+        .flip-tick .back {
+            z-index: 2;
+            transform: rotateX(180deg); /* Start flipped up */
+        }
+
+        /* Static Top: NEXT number (waiting behind Front) */
+        .flip-tick .top-static {
+            z-index: 1;
+        }
+
+        /* Static Bottom: CURRENT number (waiting behind Back, visible after flip starts) */
+        .flip-tick .bottom-static {
+            z-index: 1;
+        }
+
+        /* Animation Classes */
+        .flip-down .front {
+            animation: flipDownFront 0.6s ease-in-out forwards;
+        }
+
+        .flip-down .back {
+            animation: flipDownBack 0.6s ease-in-out forwards;
+        }
+
+        @keyframes flipDownFront {
+            0% { transform: rotateX(0deg); }
+            100% { transform: rotateX(-180deg); }
+        }
+
+        @keyframes flipDownBack {
+            0% { transform: rotateX(180deg); }
+            100% { transform: rotateX(0deg); }
+        }
+
 
         /* --- Sidebar & Pomodoro Tool Styles --- */
         .sidebar {
             position: fixed;
             top: 0;
-            right: calc(var(--sidebar-width) * -1); /* Hide off-screen */
+            right: calc(var(--sidebar-width) * -1); 
             width: var(--sidebar-width);
             height: 100%;
             background-color: var(--sidebar-bg);
@@ -99,11 +190,11 @@
 
         .sidebar-toggle {
             position: absolute;
-            left: -50px; /* Width of the tab */
+            left: -50px; 
             top: 50%;
             transform: translateY(-50%);
             width: 50px;
-            height: 100px; /* Taller tab */
+            height: 100px; 
             background-color: var(--sidebar-bg);
             border-top-left-radius: 10px;
             border-bottom-left-radius: 10px;
@@ -113,7 +204,7 @@
             justify-content: center;
             align-items: center;
             box-shadow: -2px 0 5px rgba(0,0,0,0.3);
-            writing-mode: vertical-rl; /* Vertical text */
+            writing-mode: vertical-rl;
             text-orientation: mixed;
             font-weight: bold;
             user-select: none;
@@ -123,7 +214,7 @@
         .sidebar-toggle .arrow {
             font-size: 20px;
             margin-bottom: 5px;
-            writing-mode: horizontal-tb; /* Arrow stays horizontal */
+            writing-mode: horizontal-tb; 
         }
 
         .sidebar-toggle:hover {
@@ -131,7 +222,6 @@
         }
 
         .pomodoro-section {
-            /* Reset previous styles that might conflict */
             background: transparent;
             padding: 20px;
             border-radius: 0;
@@ -177,15 +267,56 @@
             color: white;
         }
 
+        /* --- Fullscreen Button --- */
+        .fullscreen-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-color);
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            z-index: 50;
+        }
+
+        .fullscreen-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .fullscreen-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        /* Hide Sidebar Toggle and Fullscreen Button in Fullscreen Mode */
+        body.fullscreen-mode .sidebar-toggle,
+        body.fullscreen-mode .sidebar,
+        body.fullscreen-mode .fullscreen-btn {
+            display: none;
+        }
+
     </style>
 </head>
 <body>
 
+    <!-- Background Overlay -->
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
     <div class="clock-section">
         <div class="clock-container">
-            <div class="flip-card" id="hours">00</div>
-            <div class="flip-card" id="minutes">00</div>
-            <div class="flip-card" id="seconds">00</div>
+            <!-- Template will be generated by JS -->
+            <div class="flip-tick" id="tick-hours"></div>
+            <div class="flip-tick" id="tick-minutes"></div>
+            <div class="flip-tick" id="tick-seconds"></div>
         </div>
     </div>
 
@@ -207,12 +338,53 @@
         </div>
     </div>
 
+    <!-- Fullscreen Button -->
+    <button class="fullscreen-btn" onclick="toggleFullScreen()" title="Toggle Fullscreen">
+        <svg viewBox="0 0 24 24">
+            <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+        </svg>
+        Fullscreen
+    </button>
+
     <script>
+        // --- Fullscreen Logic ---
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch((err) => {
+                    console.error(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        // Listen for fullscreen change events (covers Esc key too)
+        document.addEventListener('fullscreenchange', () => {
+            const sidebar = document.getElementById('sidebar');
+            const arrow = document.getElementById('toggleArrow');
+            const overlay = document.getElementById('overlay');
+            
+            if (document.fullscreenElement) {
+                document.body.classList.add('fullscreen-mode');
+                // Auto-close sidebar when entering fullscreen
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+                arrow.innerText = '❮';
+            } else {
+                document.body.classList.remove('fullscreen-mode');
+            }
+        });
+
         // --- Sidebar Logic ---
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const arrow = document.getElementById('toggleArrow');
+            const overlay = document.getElementById('overlay');
+            
             sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
             
             if (sidebar.classList.contains('open')) {
                 arrow.innerText = '❯';
@@ -221,27 +393,97 @@
             }
         }
 
-        // --- 1. Local Clock Logic ---
+        // --- 1. Advanced 3D Flip Clock Logic ---
+
+        // Helper to create the HTML structure for a single flip unit
+        function createFlipUnit(element, initialValue) {
+            // Upper Static (Next value top)
+            // Lower Static (Current value bottom)
+            // Front (Current value top, animates)
+            // Back (Next value bottom, animates)
+            
+            // Note: In a real flip, we have:
+            // 1. Static Top (shows Next)
+            // 2. Static Bottom (shows Current)
+            // 3. Flipper Front (shows Current Top) -> Rotates Down
+            // 4. Flipper Back (shows Next Bottom) -> Rotates Up/Down
+
+            element.innerHTML = `
+                <div class="flip-card-inner upper top-static"><span>${initialValue}</span></div>
+                <div class="flip-card-inner lower bottom-static"><span>${initialValue}</span></div>
+                <div class="flip-card-inner upper front"><span>${initialValue}</span></div>
+                <div class="flip-card-inner lower back"><span>${initialValue}</span></div>
+            `;
+            
+            // Store current value on the element for comparison
+            element.dataset.val = initialValue;
+        }
+
+        // Update function for a single unit
+        function updateFlipUnit(elementId, newValue) {
+            const element = document.getElementById(elementId);
+            const currentValue = element.dataset.val;
+
+            if (currentValue === newValue) return;
+
+            // Update DOM logic for animation
+            // 1. top-static: Set to New Value
+            // 2. bottom-static: Remains Current Value
+            // 3. front: Set to Current Value
+            // 4. back: Set to New Value
+            
+            const topStatic = element.querySelector('.top-static span');
+            const bottomStatic = element.querySelector('.bottom-static span');
+            const front = element.querySelector('.front span');
+            const back = element.querySelector('.back span');
+
+            // Prep values
+            topStatic.innerText = newValue;
+            bottomStatic.innerText = currentValue;
+            front.innerText = currentValue;
+            back.innerText = newValue;
+
+            // Trigger Animation
+            // Remove class to reset if needed (though we usually wait)
+            element.classList.remove('flip-down');
+            // Force reflow
+            void element.offsetWidth; 
+            element.classList.add('flip-down');
+
+            // After animation ends, update "current" state
+            // timeout matches CSS animation duration (0.6s)
+            setTimeout(() => {
+                element.classList.remove('flip-down');
+                bottomStatic.innerText = newValue; 
+                front.innerText = newValue; 
+                element.dataset.val = newValue;
+            }, 600);
+        }
+
+        function initClock() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+
+            createFlipUnit(document.getElementById('tick-hours'), h);
+            createFlipUnit(document.getElementById('tick-minutes'), m);
+            createFlipUnit(document.getElementById('tick-seconds'), s);
+        }
+
         function updateClock() {
             const now = new Date();
             const h = String(now.getHours()).padStart(2, '0');
             const m = String(now.getMinutes()).padStart(2, '0');
             const s = String(now.getSeconds()).padStart(2, '0');
 
-            updateCard('hours', h);
-            updateCard('minutes', m);
-            updateCard('seconds', s);
+            updateFlipUnit('tick-hours', h);
+            updateFlipUnit('tick-minutes', m);
+            updateFlipUnit('tick-seconds', s);
         }
 
-        function updateCard(id, value) {
-            const el = document.getElementById(id);
-            if (el.innerText !== value) {
-                el.innerText = value;
-            }
-        }
-
+        initClock();
         setInterval(updateClock, 1000);
-        updateClock(); 
 
         // --- 2. Pomodoro Logic ---
         let timerInterval;
