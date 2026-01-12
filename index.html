@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flip Clock & Pomodoro</title>
+    <style>
+        :root {
+            --bg-color: #202020;
+            --card-bg: #333;
+            --text-color: #f0f0f0;
+            --accent-color: #e74c3c; /* Tomato Red */
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            font-weight: normal;
+            opacity: 0.8;
+        }
+
+        /* --- Flip Clock Styles --- */
+        .clock-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 50px;
+        }
+
+        .flip-card {
+            background-color: var(--card-bg);
+            width: 80px;
+            height: 100px;
+            border-radius: 8px;
+            font-size: 60px;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        /* Middle divider simulating mechanical flip */
+        .flip-card::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: rgba(0,0,0,0.3);
+            z-index: 2;
+        }
+
+        .label {
+            position: absolute;
+            bottom: -25px;
+            font-size: 14px;
+            color: #888;
+        }
+
+        /* --- Pomodoro Tool Styles --- */
+        .pomodoro-section {
+            background: rgba(255,255,255,0.05);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            width: 300px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .timer-display {
+            font-size: 48px;
+            margin: 20px 0;
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        .controls button {
+            background-color: transparent;
+            border: 2px solid var(--text-color);
+            color: var(--text-color);
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .controls button:hover {
+            background-color: var(--text-color);
+            color: var(--bg-color);
+        }
+
+        .controls button.primary {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .controls button.primary:hover {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="clock-section">
+        <div class="clock-container">
+            <div class="flip-card" id="hours">00</div>
+            <div class="flip-card" id="minutes">00</div>
+            <div class="flip-card" id="seconds">00</div>
+        </div>
+    </div>
+
+    <div class="pomodoro-section">
+        <h2>🍅 Pomodoro Focus Mode</h2>
+        <div class="timer-display" id="pomo-timer">25:00</div>
+        <div class="controls">
+            <button class="primary" onclick="startTimer()" id="startBtn">Start</button>
+            <button onclick="resetTimer()">Reset</button>
+        </div>
+        <p id="status-text" style="font-size: 12px; color: #888; margin-top: 15px;">Ready to focus?</p>
+    </div>
+
+    <script>
+        // --- 1. Local Clock Logic ---
+        function updateClock() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+
+            updateCard('hours', h);
+            updateCard('minutes', m);
+            updateCard('seconds', s);
+        }
+
+        // Simple value update. For complex 3D flip animations, DOM manipulation to add front/back cards is needed
+        function updateCard(id, value) {
+            const el = document.getElementById(id);
+            if (el.innerText !== value) {
+                el.innerText = value;
+                // Simple CSS animation classes can be added here to simulate flipping
+            }
+        }
+
+        setInterval(updateClock, 1000);
+        updateClock(); // Initial execution
+
+        // --- 2. Pomodoro Logic ---
+        let timerInterval;
+        let timeLeft = 25 * 60; // 25 minutes in seconds
+        let isRunning = false;
+
+        const timerDisplay = document.getElementById('pomo-timer');
+        const startBtn = document.getElementById('startBtn');
+        const statusText = document.getElementById('status-text');
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        function startTimer() {
+            if (isRunning) {
+                // If running, click changes to "Pause"
+                clearInterval(timerInterval);
+                isRunning = false;
+                startBtn.innerText = "Resume";
+                statusText.innerText = "Paused";
+                return;
+            }
+
+            isRunning = true;
+            startBtn.innerText = "Pause";
+            statusText.innerText = "Focusing...";
+
+            timerInterval = setInterval(() => {
+                if (timeLeft > 0) {
+                    timeLeft--;
+                    timerDisplay.innerText = formatTime(timeLeft);
+                    // Dynamically update page title to show countdown when switching tabs
+                    document.title = `(${formatTime(timeLeft)}) Focusing`;
+                } else {
+                    finishTimer();
+                }
+            }, 1000);
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            timeLeft = 25 * 60;
+            timerDisplay.innerText = "25:00";
+            startBtn.innerText = "Start";
+            statusText.innerText = "Ready to focus?";
+            document.title = "Flip Clock & Pomodoro";
+        }
+
+        function finishTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            timerDisplay.innerText = "00:00";
+            statusText.innerText = "🎉 Pomodoro finished! Take a break.";
+            startBtn.innerText = "Start";
+            document.title = "Time's up!";
+            
+            // Play alert sound (Browser policy requires user interaction before playing audio)
+            playAlert();
+            alert("Time's up! You've completed a Pomodoro.");
+        }
+
+        function playAlert() {
+            // Use Web Audio API to emit a simple "beep" sound, no external files needed
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.value = 880; // Pitch
+            osc.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            
+            osc.start();
+            gainNode.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.5);
+            osc.stop(ctx.currentTime + 0.5);
+        }
+    </script>
+</body>
+</html>
